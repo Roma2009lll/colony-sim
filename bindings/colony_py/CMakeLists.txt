@@ -8,7 +8,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(pybind11)
 
 pybind11_add_module(colony_py module.cpp)
-target_link_libraries(colony_py PRIVATE colony_core)
+target_link_libraries(colony_py PRIVATE colony_core) 
 
 set_target_properties(colony_py PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/python"
