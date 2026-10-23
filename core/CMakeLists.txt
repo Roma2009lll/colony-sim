@@ -10,4 +10,4 @@ set_project_warnings(colony_core)
 
 if(NOT COLONY_SANITIZER STREQUAL "none")
     enable_sanitizers(colony_core ${COLONY_SANITIZER})
-endif()
+endif() 
