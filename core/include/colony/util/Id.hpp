@@ -13,7 +13,7 @@ template <typename Tag, typename Underlying = std::uint32_t> class Id {
 public:
   constexpr Id() noexcept = default;
 
-  explicit constexpr Id(Underlying value) noexcept { this->value_ = value }
+  explicit constexpr Id(Underlying value) noexcept { this->value_ = value; }
 
   static constexpr Id invalid() noexcept { return Id(); }
 

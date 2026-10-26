@@ -29,7 +29,7 @@ struct Cell {
   constexpr Cell operator-(const Cell &other) const noexcept {
     return {x - other.x, y - other.y};
   }
-};
+}; 
 
 template <typename T> class Grid {
 public:

@@ -10,7 +10,9 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 add_executable(unit_tests
-    unit/smoke_test.cpp
+    unit/GridTests.cpp
+    unit/IdTests.cpp
+    unit/RngTests.cpp
 )
 
 target_link_libraries(unit_tests PRIVATE
@@ -20,8 +22,8 @@ target_link_libraries(unit_tests PRIVATE
 
 set_project_warnings(unit_tests)
 
-if(NOT COLONY_SANITIZER STREQUAL "none")
-    enable_sanitizers(unit_tests ${COLONY_SANITIZER})
+if(COLONY_SANITIZER AND NOT COLONY_SANITIZER STREQUAL "none")
+    enable_sanitizers(unit_tests "${COLONY_SANITIZER}")
 endif()
 
 include(GoogleTest)

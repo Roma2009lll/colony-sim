@@ -8,6 +8,6 @@ target_include_directories(colony_core PUBLIC
 
 set_project_warnings(colony_core)
 
-if(NOT COLONY_SANITIZER STREQUAL "none")
-    enable_sanitizers(colony_core ${COLONY_SANITIZER})
-endif() 
+if(COLONY_SANITIZER AND NOT COLONY_SANITIZER STREQUAL "none")
+    enable_sanitizers(colony_core "${COLONY_SANITIZER}")
+endif()  
