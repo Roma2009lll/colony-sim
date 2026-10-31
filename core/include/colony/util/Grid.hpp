@@ -32,7 +32,7 @@ struct Cell {
 }; 
 
 template <typename T> class Grid {
-public:
+public: 
   using StorageType =
       std::conditional_t<std::is_same_v<T, bool>, std::uint8_t, T>;
 

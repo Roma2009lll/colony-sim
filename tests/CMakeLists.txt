@@ -13,6 +13,9 @@ add_executable(unit_tests
     unit/GridTests.cpp
     unit/IdTests.cpp
     unit/RngTests.cpp
+    world/MapLoaderTests.cpp
+    world/TileTests.cpp
+    world/WorldTests.cpp
 )
 
 target_link_libraries(unit_tests PRIVATE
