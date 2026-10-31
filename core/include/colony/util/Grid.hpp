@@ -1,71 +1,100 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
-#include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <limits>
+#include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
-#include <vector>
 
 namespace colony::util {
+
 struct Cell {
   std::int32_t x{0};
   std::int32_t y{0};
-  bool operator==(const Cell &cell) const {
-    return x == cell.x && y == cell.y;
-  };
-
-  bool operator<(const Cell &cell) const noexcept {
-    return x < cell.x || (x == cell.x && y < cell.y);
+  [[nodiscard]] constexpr bool operator==(const Cell &other) const noexcept {
+    return x == other.x && y == other.y;
   }
 
-  constexpr Cell operator+(const Cell &other) const noexcept {
+  [[nodiscard]] constexpr bool operator!=(const Cell &other) const noexcept {
+    return !(*this == other);
+  }
+
+  [[nodiscard]] constexpr bool operator<(const Cell &other) const noexcept {
+    return x < other.x || (x == other.x && y < other.y);
+  }
+
+  [[nodiscard]] constexpr bool operator<=(const Cell &other) const noexcept {
+    return !(other < *this);
+  }
+
+  [[nodiscard]] constexpr bool operator>(const Cell &other) const noexcept {
+    return other < *this;
+  }
+
+  [[nodiscard]] constexpr bool operator>=(const Cell &other) const noexcept {
+    return !(*this < other);
+  }
+
+  [[nodiscard]] constexpr Cell operator+(const Cell &other) const noexcept {
     return {x + other.x, y + other.y};
   }
 
-  constexpr Cell operator-(const Cell &other) const noexcept {
+  [[nodiscard]] constexpr Cell operator-(const Cell &other) const noexcept {
     return {x - other.x, y - other.y};
   }
-}; 
+};
 
 template <typename T> class Grid {
-public: 
-  using StorageType =
-      std::conditional_t<std::is_same_v<T, bool>, std::uint8_t, T>;
+public:
+  Grid() = default;
 
-  constexpr Grid() = default;
-
-  Grid(size_t width, size_t height, const T &default_value = T{})
-      : width_{width}, height_{height},
-        data_(width * height, static_cast<StorageType>(default_value)) {}
-
-  Grid(Grid &&other) noexcept {
-    data_ = std::move(other.data_);
-    width_ = std::exchange(other.width_, 0);
-    height_ = std::exchange(other.height_, 0);
+  Grid(std::size_t width, std::size_t height, const T &default_value = T{})
+      : data_(make_storage(checked_size(width, height))), width_{width},
+        height_{height} {
+    std::fill(begin(), end(), default_value);
   }
 
-  Grid &operator=(Grid &&other) noexcept {
+  Grid(const Grid &other)
+      : data_(make_storage(other.size())), width_{other.width_},
+        height_{other.height_} {
+    std::copy(other.begin(), other.end(), begin());
+  }
+
+  Grid &operator=(const Grid &other) {
     if (this != &other) {
-      data_ = std::move(other.data_);
-      width_ = std::exchange(other.width_, 0);
-      height_ = std::exchange(other.height_, 0);
+      Grid copy(other);
+      *this = std::move(copy);
     }
     return *this;
   }
 
-  Grid(const Grid &) = default;
-  Grid &operator=(const Grid &) = default;
+  Grid(Grid &&other) noexcept
+      : data_(std::move(other.data_)),
+        width_(std::exchange(other.width_, std::size_t{0})),
+        height_(std::exchange(other.height_, std::size_t{0})) {}
+
+  Grid &operator=(Grid &&other) noexcept {
+    if (this != &other) {
+      data_ = std::move(other.data_);
+      width_ = std::exchange(other.width_, std::size_t{0});
+      height_ = std::exchange(other.height_, std::size_t{0});
+    }
+    return *this;
+  }
+
   ~Grid() = default;
 
-  [[nodiscard]] size_t constexpr width() const noexcept { return width_; }
+  [[nodiscard]] constexpr std::size_t width() const noexcept { return width_; }
 
-  [[nodiscard]] size_t constexpr height() const noexcept { return height_; }
+  [[nodiscard]] constexpr std::size_t height() const noexcept {
+    return height_;
+  }
 
-  [[nodiscard]] size_t constexpr size() const noexcept {
+  [[nodiscard]] constexpr std::size_t size() const noexcept {
     return width_ * height_;
   }
 
@@ -74,12 +103,12 @@ public:
            cell.y >= 0 && static_cast<std::size_t>(cell.y) < height_;
   }
 
-  [[nodiscard]] T &operator[](const Cell &cell) noexcept {
-    return reinterpret_cast<T &>(data_[to_index(cell)]);
+  [[nodiscard]] T &operator[](Cell cell) noexcept {
+    return data_[to_index(cell)];
   }
 
   [[nodiscard]] const T &operator[](Cell cell) const noexcept {
-    return reinterpret_cast<const T &>(data_[to_index(cell)]);
+    return data_[to_index(cell)];
   }
 
   [[nodiscard]] T &operator()(std::int32_t x, std::int32_t y) noexcept {
@@ -105,35 +134,44 @@ public:
     return (*this)[cell];
   }
 
-  auto begin() noexcept { return reinterpret_cast<T *>(data_.data()); }
-  auto end() noexcept {
-    return reinterpret_cast<T *>(data_.data() + data_.size());
-  }
-  auto begin() const noexcept {
-    return reinterpret_cast<const T *>(data_.data());
-  }
-  auto end() const noexcept {
-    return reinterpret_cast<const T *>(data_.data() + data_.size());
-  }
+  [[nodiscard]] T *begin() noexcept { return data_.get(); }
+  [[nodiscard]] T *end() noexcept { return data_.get() + size(); }
+  [[nodiscard]] const T *begin() const noexcept { return data_.get(); }
+  [[nodiscard]] const T *end() const noexcept { return data_.get() + size(); }
 
 private:
-  std::vector<StorageType> data_;
-  size_t width_{0};
-  size_t height_{0};
+  std::unique_ptr<T[]> data_;
+  std::size_t width_{0};
+  std::size_t height_{0};
 
-  [[nodiscard]] size_t to_index(const Cell &cell) const noexcept {
+  [[nodiscard]] static std::size_t checked_size(std::size_t width,
+                                                std::size_t height) {
+    if (width != 0 &&
+        height > std::numeric_limits<std::size_t>::max() / width) {
+      throw std::length_error("Grid: width * height overflows size_t");
+    }
+    return width * height;
+  }
+
+  [[nodiscard]] static std::unique_ptr<T[]> make_storage(std::size_t count) {
+    return std::make_unique<T[]>(count);
+  }
+
+  [[nodiscard]] std::size_t to_index(Cell cell) const noexcept {
     assert(in_bounds(cell));
-    return static_cast<size_t>(cell.y) * width_ + static_cast<size_t>(cell.x);
+    return static_cast<std::size_t>(cell.y) * width_ +
+           static_cast<std::size_t>(cell.x);
   }
 };
+
 } // namespace colony::util
 
 namespace std {
 template <> struct hash<colony::util::Cell> {
   std::size_t operator()(const colony::util::Cell &cell) const noexcept {
-    size_t h1 = std::hash<std::int32_t>{}(cell.x);
-    size_t h2 = std::hash<std::int32_t>{}(cell.y);
-    return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
+    const std::size_t h1 = std::hash<std::int32_t>{}(cell.x);
+    const std::size_t h2 = std::hash<std::int32_t>{}(cell.y);
+    return h1 ^ (h2 + 0x9e3779b9u + (h1 << 6) + (h1 >> 2));
   }
 };
 } // namespace std

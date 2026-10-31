@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <limits>
+#include <unordered_set>
 
 namespace colony::util {
 namespace {
@@ -56,16 +57,32 @@ TEST(RngTest, ChanceEdgeCases) {
   EXPECT_FALSE(rng.chance(nan_val));
 }
 
-TEST(RngTest, ChanceStatisticalDistribution) {
+TEST(RngTest, ChanceStatisticalDistributionIsBalanced) {
   Rng rng(42ULL);
   int true_count = 0;
   constexpr int iterations = 10000;
   for (int i = 0; i < iterations; ++i) {
     if (rng.chance(0.5)) {
-      ++true_count;
+      true_count++;
     }
   }
   EXPECT_NEAR(true_count, 5000, 300);
+}
+
+TEST(RngTest, UniqueSeedPerTickAndAgentGrid) {
+  const std::uint64_t master_seed = 42;
+  const std::size_t ticks = 100;
+  const std::size_t agents = 1000;
+  const std::size_t total_expected = ticks * agents;
+  std::unordered_set<std::uint64_t> first_generated_values;
+  first_generated_values.reserve(total_expected);
+  for (std::uint64_t tick = 0; tick < ticks; ++tick) {
+    for (std::uint64_t agent = 0; agent < agents; ++agent) {
+      auto agent_rng = Rng::for_agent(master_seed, tick, agent);
+      first_generated_values.insert(agent_rng.next_u64());
+    }
+  }
+  EXPECT_EQ(first_generated_values.size(), total_expected);
 }
 
 } // namespace

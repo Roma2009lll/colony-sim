@@ -32,10 +32,16 @@ colony::world::MapLoader::load_from_file(const std::string &filepath) {
   if (!fp.is_open()) {
     return colony::world::MapParseError::FileNotFound;
   }
-  auto file_size = std::filesystem::file_size(filepath);
+  std::error_code ec;
+  auto file_size = std::filesystem::file_size(filepath, ec);
+  if (ec) {
+    return MapParseError::FileNotFound;
+  }
   std::string content;
   content.resize(file_size);
-  fp.read(&content[0], file_size);
+  if (!fp.read(content.data(), static_cast<std::streamsize>(file_size))) {
+    return MapParseError::FileNotFound;
+  }
   return colony::world::MapLoader::load_from_string(content);
 }
 
@@ -114,6 +120,9 @@ colony::world::MapLoader::load_from_string(std::string &content) {
   colony::world::MapLoader::remove_carriage_returns(content);
   if (content.empty()) {
     return colony::world::MapParseError::EmptyMap;
+  }
+  if (content.rfind("\xEF\xBB\xBF", 0) == 0) {
+    content.erase(0, 3);
   }
   std::vector<std::string_view> lines;
   split_lines(content, lines);

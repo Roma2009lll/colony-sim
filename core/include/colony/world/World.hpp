@@ -9,8 +9,8 @@
 namespace colony::world {
 class World {
 private:
-  util::Cell start_position_{0, 0};
   util::Grid<Tile> grid_;
+  util::Cell start_position_{0, 0};
   std::uint32_t stored_food_{0};
   std::uint32_t stored_wood_{0};
 
@@ -76,17 +76,20 @@ public:
     }
 
     bool has_storage = false;
-    for (std::size_t y = 0; y < grid_.height(); y++) {
-      for (std::size_t x = 0; x < grid_.width(); x++) {
-        if (grid_[util::Cell{static_cast<std::int32_t>(x),
-                             static_cast<std::int32_t>(y)}]
-                .terrain == TerrainType::Storage) {
-          has_storage = true;
-          break;
-        }
+    for (const auto &tile : grid_) {
+      if (tile.terrain == TerrainType::Storage) {
+        has_storage = true;
       }
-      if (has_storage)
-        break;
+      if (tile.terrain == TerrainType::Wall &&
+          tile.resource != ResourceType::None) {
+        return false;
+      }
+      if (tile.resource == ResourceType::None && tile.resource_amount > 0) {
+        return false;
+      }
+      if (tile.resource != ResourceType::None && tile.resource_amount == 0) {
+        return false;
+      }
     }
     return has_storage;
   }
