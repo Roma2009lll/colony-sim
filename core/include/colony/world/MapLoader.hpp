@@ -1,12 +1,9 @@
 #pragma once
 
-#include "World.hpp"
+#include <colony/world/World.hpp>
 
-#include <algorithm>
-#include <filesystem>
-#include <fstream>
+#include <cstdint>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -26,8 +23,6 @@ enum class MapParseError {
 
 class MapLoader {
 private:
-  static void remove_carriage_returns(std::string &content);
-
   static void split_lines(std::string_view content,
                           std::vector<std::string_view> &lines);
 
@@ -40,8 +35,12 @@ private:
 
 public:
   MapLoader() = delete;
+
+  // Символи: '#' стіна, '.' земля, 'S' склад, 'F' їжа, 'T' дерево, '@' старт.
+  // Кінці рядків: \n або \r\n; порожні рядки в кінці та UTF-8 BOM ігноруються.
+  // Вхідний текст не змінюється.
   static std::variant<World, MapParseError>
-  load_from_string(std::string &content);
+  load_from_string(std::string_view content);
 
   static std::variant<World, MapParseError>
   load_from_file(const std::string &filepath);

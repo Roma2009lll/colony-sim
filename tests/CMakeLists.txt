@@ -25,6 +25,10 @@ target_link_libraries(unit_tests PRIVATE
 
 set_project_warnings(unit_tests)
 
+# Каталог з тестовими даними (карти) для тестів, що читають файли.
+target_compile_definitions(unit_tests PRIVATE
+    COLONY_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
+
 if(COLONY_SANITIZER AND NOT COLONY_SANITIZER STREQUAL "none")
     enable_sanitizers(unit_tests "${COLONY_SANITIZER}")
 endif()

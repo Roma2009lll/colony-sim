@@ -1,5 +1,9 @@
 #include <colony/world/MapLoader.hpp>
 
+#include <filesystem>
+#include <fstream>
+#include <system_error>
+
 std::string_view
 colony::world::MapLoader::to_string(colony::world::MapParseError error) {
   switch (error) {
@@ -19,11 +23,6 @@ colony::world::MapLoader::to_string(colony::world::MapParseError error) {
     return "InvariantViolation";
   }
   return "UnknownError";
-}
-
-void colony::world::MapLoader::remove_carriage_returns(std::string &content) {
-  auto new_end = std::remove(content.begin(), content.end(), '\r');
-  content.erase(new_end, content.end());
 }
 
 std::variant<colony::world::World, colony::world::MapParseError>
@@ -47,20 +46,17 @@ colony::world::MapLoader::load_from_file(const std::string &filepath) {
 
 void colony::world::MapLoader::split_lines(
     std::string_view content, std::vector<std::string_view> &lines) {
-  const char *const start_ptr = content.data();
-  const char *const end_ptr = start_ptr + content.size();
-  const char *current_start = start_ptr;
-  for (const char *p = start_ptr; p < end_ptr; p++) {
-    if (*p == '\n') {
-      size_t len = p - current_start;
-      if (len > 0) {
-        lines.emplace_back(current_start, len);
-      }
-      current_start = p + 1;
+  while (!content.empty()) {
+    const std::size_t newline = content.find('\n');
+    std::string_view line = content.substr(0, newline);
+    content.remove_prefix(newline == std::string_view::npos ? content.size()
+                                                            : newline + 1);
+    // CRLF: прибираємо лише '\r' перед '\n'. Випадковий '\r' усередині рядка
+    // лишається й стане помилкою UnknownSymbol.
+    if (!line.empty() && line.back() == '\r') {
+      line.remove_suffix(1);
     }
-  }
-  if (current_start < end_ptr) {
-    lines.emplace_back(current_start, end_ptr - current_start);
+    lines.push_back(line);
   }
 }
 
@@ -116,23 +112,25 @@ colony::world::MapLoader::validate_world(const World &world,
 }
 
 std::variant<colony::world::World, colony::world::MapParseError>
-colony::world::MapLoader::load_from_string(std::string &content) {
-  colony::world::MapLoader::remove_carriage_returns(content);
-  if (content.empty()) {
-    return colony::world::MapParseError::EmptyMap;
-  }
-  if (content.rfind("\xEF\xBB\xBF", 0) == 0) {
-    content.erase(0, 3);
+colony::world::MapLoader::load_from_string(std::string_view content) {
+  constexpr std::string_view utf8_bom = "\xEF\xBB\xBF";
+  if (content.starts_with(utf8_bom)) {
+    content.remove_prefix(utf8_bom.size());
   }
   std::vector<std::string_view> lines;
   split_lines(content, lines);
+  // Порожні рядки в кінці файлу ігноруємо; порожній рядок усередині карти
+  // лишається рядком нульової довжини й дає UnevenRows.
+  while (!lines.empty() && lines.back().empty()) {
+    lines.pop_back();
+  }
   if (lines.empty()) {
     return colony::world::MapParseError::EmptyMap;
   }
   const std::size_t height = lines.size();
-  const std::size_t width = lines[0].size();
+  const std::size_t width = lines.front().size();
   if (width == 0) {
-    return colony::world::MapParseError::EmptyMap;
+    return colony::world::MapParseError::UnevenRows;
   }
   colony::world::World world(width, height);
   std::uint32_t spawn_count = 0;
