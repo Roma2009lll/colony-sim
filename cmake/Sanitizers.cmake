@@ -12,5 +12,9 @@ function(enable_sanitizers target_name sanitizer_type)
     elseif(sanitizer_type STREQUAL "tsan")
         target_compile_options(${target_name} PRIVATE -fsanitize=thread)
         target_link_options(${target_name} PRIVATE -fsanitize=thread)
+    else()
+        message(FATAL_ERROR
+            "Unknown COLONY_SANITIZER value '${sanitizer_type}'. "
+            "Expected one of: none, asan-ubsan, tsan.")
     endif()
 endfunction()
