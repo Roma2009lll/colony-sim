@@ -70,4 +70,25 @@ TEST(WorldTest, CheckInvariantsInvalidCases) {
   EXPECT_FALSE(no_storage_world.check_invariants());
 }
 
+TEST(WorldTest, CheckInvariantsAllowsDepletedFoodNode) {
+  World world(3, 3, util::Cell{0, 0});
+  world[util::Cell{1, 1}].terrain = TerrainType::Storage;
+  world[util::Cell{2, 2}] = Tile{TerrainType::Ground, ResourceType::Food, 0};
+  EXPECT_TRUE(world.check_invariants());
+}
+
+TEST(WorldTest, CheckInvariantsRejectsResourceOnWall) {
+  World world(3, 3, util::Cell{0, 0});
+  world[util::Cell{1, 1}].terrain = TerrainType::Storage;
+  world[util::Cell{2, 2}] = Tile{TerrainType::Wall, ResourceType::Food, 5};
+  EXPECT_FALSE(world.check_invariants());
+}
+
+TEST(WorldTest, CheckInvariantsRejectsAmountWithoutResourceType) {
+  World world(3, 3, util::Cell{0, 0});
+  world[util::Cell{1, 1}].terrain = TerrainType::Storage;
+  world[util::Cell{2, 2}] = Tile{TerrainType::Ground, ResourceType::None, 3};
+  EXPECT_FALSE(world.check_invariants());
+}
+
 } // namespace colony::world

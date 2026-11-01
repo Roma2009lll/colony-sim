@@ -87,9 +87,8 @@ public:
       if (tile.resource == ResourceType::None && tile.resource_amount > 0) {
         return false;
       }
-      if (tile.resource != ResourceType::None && tile.resource_amount == 0) {
-        return false;
-      }
+      // Вузол із resource != None і amount == 0 допустимий: вичерпана їжа
+      // відростає, тож такий стан не є порушенням інваріанта.
     }
     return has_storage;
   }
