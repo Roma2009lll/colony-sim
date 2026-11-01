@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include <random>
+#include <utility>
 
 namespace colony::util {
 class Rng {
@@ -33,6 +34,8 @@ public:
 
   [[nodiscard]] std::uint64_t next_u64() { return engine_(); }
 
+  // Рівномірне ціле з замкненого діапазону [min, max]. Якщо min > max,
+  // межі міняються місцями.
   [[nodiscard]] std::int32_t range(int min, int max) {
     if (min > max)
       std::swap(min, max);

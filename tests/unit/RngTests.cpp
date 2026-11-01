@@ -17,15 +17,19 @@ TEST(RngTest, DeterminismWithSameSeed) {
 }
 
 TEST(RngTest, AgentDeterminismAndUniqueness) {
-  std::uint64_t seed = 42;
-  std::uint64_t tick = 100;
-  std::uint64_t agent1_id = 1;
-  std::uint64_t agent2_id = 2;
-  Rng rng_a1 = Rng::for_agent(seed, tick, agent1_id);
-  Rng rng_a1_dup = Rng::for_agent(seed, tick, agent1_id);
-  Rng rng_a2 = Rng::for_agent(seed, tick, agent2_id);
-  EXPECT_EQ(rng_a1.next_u64(), rng_a1_dup.next_u64());
-  EXPECT_NE(rng_a1.next_u64(), rng_a2.next_u64());
+  const std::uint64_t seed = 42;
+  const std::uint64_t tick = 100;
+  Rng rng_a1 = Rng::for_agent(seed, tick, 1);
+  Rng rng_a1_dup = Rng::for_agent(seed, tick, 1);
+  Rng rng_a2 = Rng::for_agent(seed, tick, 2);
+  Rng rng_other_tick = Rng::for_agent(seed, tick + 1, 1);
+  Rng rng_other_seed = Rng::for_agent(seed + 1, tick, 1);
+  // Порівнюємо перші значення потоків (однакові позиції).
+  const std::uint64_t first = rng_a1.next_u64();
+  EXPECT_EQ(first, rng_a1_dup.next_u64());
+  EXPECT_NE(first, rng_a2.next_u64());
+  EXPECT_NE(first, rng_other_tick.next_u64());
+  EXPECT_NE(first, rng_other_seed.next_u64());
 }
 
 TEST(RngTest, RangeBounds) {
@@ -36,6 +40,15 @@ TEST(RngTest, RangeBounds) {
     EXPECT_LE(val, 10);
   }
   EXPECT_EQ(rng.range(5, 5), 5);
+}
+
+TEST(RngTest, RangeSwapsReversedBounds) {
+  Rng rng(555ULL);
+  for (int i = 0; i < 1000; ++i) {
+    const std::int32_t val = rng.range(10, -10);
+    EXPECT_GE(val, -10);
+    EXPECT_LE(val, 10);
+  }
 }
 
 TEST(RngTest, UniformBounds) {
