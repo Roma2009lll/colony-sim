@@ -22,7 +22,7 @@ TEST(CellTest, ArithmeticAndComparison) {
   EXPECT_EQ(diff.y, 3);
   EXPECT_EQ(c1, (Cell{3, 5}));
   EXPECT_NE(c1, c2);
-  EXPECT_TRUE(c2 < c1); // x: 1 < 3
+  EXPECT_TRUE(c2 < c1); 
 }
 
 TEST(CellTest, UnorderedContainerHashSupport) {
