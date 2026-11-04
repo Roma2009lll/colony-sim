@@ -2,9 +2,9 @@
 
 #include <cstdint>
 
-#include "colony/agents/Needs.hpp"
-#include "colony/util/Grid.hpp"
-#include "colony/world/Tile.hpp"
+#include <colony/agents/Needs.hpp>
+#include <colony/util/Grid.hpp>
+#include <colony/world/Tile.hpp>
 
 namespace colony::agents {
 enum class AgentIntent : std::uint8_t {
@@ -84,7 +84,7 @@ public:
     inventory_.resource_amount = amount;
   }
 
-  constexpr void set_inventory(Inventory &inventory) noexcept {
+  constexpr void set_inventory(const Inventory &inventory) noexcept {
     inventory_ = inventory;
   }
 

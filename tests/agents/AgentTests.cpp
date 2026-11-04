@@ -1,4 +1,5 @@
 #include <colony/agents/Agent.hpp>
+#include <colony/util/SlotMap.hpp>
 #include <gtest/gtest.h>
 
 namespace colony::agents {
@@ -62,6 +63,28 @@ TEST(AgentTest, InventoryManagement) {
   EXPECT_TRUE(agent.has_resource());
   EXPECT_EQ(agent.get_inventory().resource, ResourceType::Food);
   EXPECT_EQ(agent.get_inventory().resource_amount, 20);
+}
+
+TEST(AgentTest, SetInventoryAcceptsTemporary) {
+  Agent agent{1, Cell{0, 0}};
+  agent.set_inventory(Inventory{.resource_amount = 5, .resource = ResourceType::Food});
+  EXPECT_TRUE(agent.has_resource());
+  EXPECT_EQ(agent.get_inventory().resource_amount, 5u);
+}
+
+static_assert(colony::util::SlotMapValue<Agent>);
+
+TEST(AgentTest, StoredInSlotMap) {
+  colony::util::SlotMap<Agent> agents;
+  const auto first = agents.emplace(1u, Cell{0, 0});
+  const auto second = agents.emplace(2u, Cell{3, 4});
+  agents[first].needs().apply_hunger(Needs::kill_hunger);
+  EXPECT_TRUE(agents[first].is_dead());
+  EXPECT_TRUE(agents.erase(first));
+  EXPECT_EQ(agents.find(first), nullptr);
+  ASSERT_NE(agents.find(second), nullptr);
+  EXPECT_EQ(agents[second].id(), 2u);
+  EXPECT_EQ(agents[second].position(), (Cell{3, 4}));
 }
 
 } // namespace
