@@ -13,10 +13,15 @@ add_executable(unit_tests
     unit/GridTests.cpp
     unit/IdTests.cpp
     unit/RngTests.cpp
+    unit/SlotMapTests.cpp
     world/MapLoaderTests.cpp
     world/TileTests.cpp
     world/WorldTests.cpp
+    agents/AgentTests.cpp
+    agents/NeedsTests.cpp
 )
+
+target_compile_features(unit_tests PRIVATE cxx_std_20)
 
 target_link_libraries(unit_tests PRIVATE
     colony_core
@@ -25,7 +30,6 @@ target_link_libraries(unit_tests PRIVATE
 
 set_project_warnings(unit_tests)
 
-# Каталог з тестовими даними (карти) для тестів, що читають файли.
 target_compile_definitions(unit_tests PRIVATE
     COLONY_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
