@@ -31,9 +31,16 @@ struct Handle {
 
 // T зберігається в std::vector і при видаленні переміщується на місце
 // видаленого елемента, тому потрібні move-конструювання та move-присвоєння.
+// Перевиділення vector усередині emplace переносить наявні елементи: якщо їх
+// move-конструктор може кинути виняток і копіювання неможливе, вже перенесені
+// елементи лишаються «порожніми». Тому move-конструктор має бути noexcept, або
+// T має копіюватися (тоді vector копіює замість переміщення).
 // bool виключено: std::vector<bool> не має data() і не віддає T&.
 template <typename T>
-concept SlotMapValue = std::movable<T> && !std::same_as<T, bool>;
+concept SlotMapValue =
+    std::movable<T> && !std::same_as<T, bool> &&
+    (std::is_nothrow_move_constructible_v<T> ||
+     std::is_copy_constructible_v<T>);
 
 // SlotMap<T> - щільне сховище зі стабільними дескрипторами (Handle).
 //
@@ -53,12 +60,14 @@ concept SlotMapValue = std::movable<T> && !std::same_as<T, bool>;
 //    місце видаленого, і лічильник циклу його пропустить. Збирайте дескриптори
 //    потрібних елементів і видаляйте їх після циклу.
 //
-// Винятки:
-//  * emplace має строгу гарантію: якщо конструктор T кидає виняток, контейнер
-//    і вільні слоти не змінюються.
+// Винятки (для T, що задовольняє SlotMapValue):
+//  * emplace має строгу гарантію: якщо виняток кинув конструктор T або
+//    виділення пам'яті, контейнер і список вільних слотів не змінюються.
 //  * erase є noexcept рівно тоді, коли move-присвоєння T є noexcept. Якщо воно
-//    все ж кине, структура контейнера лишається узгодженою (елемент не
-//    видалено), а значення елемента, що видаляється, невизначене.
+//    все ж кине, службові індекси лишаються узгодженими: елемент не видалено,
+//    усі дескриптори дійсні. Але move-присвоєння могло встигнути змінити обидва
+//    об'єкти (той, що видаляється, і останній), тож їхні значення після
+//    винятку невизначені.
 template <SlotMapValue T> class SlotMap {
 private:
   std::vector<T> dense_;
@@ -78,6 +87,8 @@ private:
   }
 
   // Гарантує місце ще для одного елемента, щоб подальший push_back не кидав.
+  // capacity() * 2 не переповнюється: capacity() <= max_size() <= PTRDIFF_MAX,
+  // а надмірний запит reserve сам кидає std::length_error.
   template <typename U>
   static constexpr void reserve_one_more(std::vector<U> &vec) {
     if (vec.size() == vec.capacity()) {
@@ -150,7 +161,9 @@ public:
     const std::uint32_t del_index = slot.dense_index_;
     const auto last_el_index = static_cast<std::uint32_t>(dense_.size() - 1);
     if (del_index != last_el_index) {
-      // Єдине місце, що може кинути виняток; стан ще не змінено.
+      // Єдине місце, що може кинути виняток. Службові індекси ще не змінено,
+      // тож структура лишається узгодженою, але значення обох елементів після
+      // винятку невизначені (див. коментар до класу).
       dense_[del_index] = std::move(dense_[last_el_index]);
       const std::uint32_t last_slot_index = dense_to_sparse_[last_el_index];
       dense_to_sparse_[del_index] = last_slot_index;

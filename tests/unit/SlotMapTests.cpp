@@ -155,6 +155,23 @@ struct ThrowingMove {
   }
 };
 
+// Move-only, а move-конструктор може кинути: перевиділення vector залишило б
+// наявні елементи «порожніми», тому такий тип відхиляється.
+struct MoveOnlyThrowingMoveCtor {
+  MoveOnlyThrowingMoveCtor() = default;
+  MoveOnlyThrowingMoveCtor(MoveOnlyThrowingMoveCtor &&) noexcept(false) {}
+  MoveOnlyThrowingMoveCtor &operator=(MoveOnlyThrowingMoveCtor &&) = default;
+};
+
+// Копіюється, тож vector при перевиділенні копіює і зберігає строгу гарантію.
+struct CopyableThrowingMoveCtor {
+  CopyableThrowingMoveCtor() = default;
+  CopyableThrowingMoveCtor(const CopyableThrowingMoveCtor &) = default;
+  CopyableThrowingMoveCtor(CopyableThrowingMoveCtor &&) noexcept(false) {}
+  CopyableThrowingMoveCtor &operator=(const CopyableThrowingMoveCtor &) = default;
+  CopyableThrowingMoveCtor &operator=(CopyableThrowingMoveCtor &&) = default;
+};
+
 template <typename T>
 concept CanMakeSlotMap = requires { typename SlotMap<T>; };
 
@@ -166,7 +183,10 @@ static_assert(!SlotMapValue<bool>);
 static_assert(!SlotMapValue<int &>);
 static_assert(!SlotMapValue<NonMovable>);
 static_assert(!SlotMapValue<ConstMember>);
+static_assert(!SlotMapValue<MoveOnlyThrowingMoveCtor>);
+static_assert(SlotMapValue<CopyableThrowingMoveCtor>);
 static_assert(CanMakeSlotMap<int>);
+static_assert(!CanMakeSlotMap<MoveOnlyThrowingMoveCtor>);
 static_assert(!CanMakeSlotMap<bool>);
 static_assert(!CanMakeSlotMap<NonMovable>);
 static_assert(!CanMakeSlotMap<ConstMember>);
@@ -326,6 +346,57 @@ TEST(SlotMapExceptionTest, ThrowingConstructorDoesNotCreateSlot) {
   const Handle second = map.emplace(3);
   EXPECT_EQ(second.index_, first.index_ + 1);
   EXPECT_EQ(map.size(), 2u);
+}
+
+// Тип, що копіюється, але move-конструктор може кинути: vector при
+// перевиділенні копіює, тож невдале копіювання не псує наявні елементи.
+struct CopyThrows {
+  static inline int copies_left = 1000;
+  int value;
+  explicit CopyThrows(int v) : value(v) {}
+  CopyThrows(const CopyThrows &other) : value(other.value) {
+    if (--copies_left < 0) {
+      throw std::runtime_error("copy");
+    }
+  }
+  CopyThrows(CopyThrows &&other) noexcept(false) : value(other.value) {
+    other.value = -1;
+  }
+  CopyThrows &operator=(const CopyThrows &) = default;
+  CopyThrows &operator=(CopyThrows &&) = default;
+};
+
+TEST(SlotMapExceptionTest, FailedGrowthKeepsExistingElementsOfCopyableType) {
+  CopyThrows::copies_left = 1000;
+  SlotMap<CopyThrows> map;
+  std::vector<Handle> handles;
+  std::vector<int> expected;
+  for (int i = 1; i <= 4; ++i) {
+    handles.push_back(map.emplace(i));
+    expected.push_back(i);
+  }
+
+  // Кожне копіювання кидає: перше ж перевиділення vector завершується
+  // винятком (межа росту залежить від реалізації, тому цикл).
+  CopyThrows::copies_left = 0;
+  bool threw = false;
+  for (int i = 0; i < 64 && !threw; ++i) {
+    try {
+      handles.push_back(map.emplace(100 + i));
+      expected.push_back(100 + i);
+    } catch (const std::runtime_error &) {
+      threw = true;
+    }
+  }
+  CopyThrows::copies_left = 1000;
+
+  ASSERT_TRUE(threw);
+  ASSERT_EQ(map.size(), handles.size());
+  for (std::size_t i = 0; i < handles.size(); ++i) {
+    EXPECT_EQ(map[handles[i]].value, expected[i]) << "element " << i;
+  }
+  const Handle again = map.emplace(7);
+  EXPECT_EQ(map[again].value, 7);
 }
 
 TEST(SlotMapExceptionTest, ThrowingMoveAssignmentInEraseKeepsMapConsistent) {
