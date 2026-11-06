@@ -16,8 +16,6 @@ namespace colony::util {
 static constexpr std::uint32_t k_invalid_index =
     std::numeric_limits<std::uint32_t>::max();
 
-// dense_index_ == k_invalid_index означає, що слот не містить елемента
-// (вільний або виведений з обігу).
 struct Slot {
   std::uint32_t dense_index_{k_invalid_index};
   std::uint32_t generation_{0};
@@ -29,37 +27,9 @@ struct Handle {
   std::uint32_t generation_{0};
 };
 
-// T зберігається в std::vector і при видаленні переміщується на місце
-// видаленого елемента, тому потрібні move-конструювання та move-присвоєння.
-// bool виключено: std::vector<bool> не має data() і не віддає T&.
 template <typename T>
-inline constexpr bool SlotMapValue =
-  std::movable<T> && !std::same_as<T, bool>;
+inline constexpr bool SlotMapValue = std::movable<T> && !std::same_as<T, bool>;
 
-// SlotMap<T> - щільне сховище зі стабільними дескрипторами (Handle).
-//
-// Дескриптор = (індекс слота, покоління). Видалення збільшує покоління слота,
-// тому застарілий дескриптор виявляється (is_valid / find) навіть після
-// повторного використання слота. Слот, чиє покоління досягло максимуму,
-// виводиться з обігу, тож лічильник ніколи не переповнюється.
-//
-// Інвалідація:
-//  * emplace / insert можуть перевиділити пам'ять: усі вказівники, посилання
-//    та span, отримані з find / operator[] / data(), стають недійсними.
-//  * erase переносить ОСТАННІЙ елемент на місце видаленого (swap-and-pop):
-//    недійсними стають вказівники на видалений і на останній елемент, а
-//    порядок щільної ітерації змінюється. Цей порядок повністю визначається
-//    послідовністю операцій. Дескриптори решти елементів лишаються дійсними.
-//  * Видаляти під час ітерації по data() заборонено: елемент з кінця займає
-//    місце видаленого, і лічильник циклу його пропустить. Збирайте дескриптори
-//    потрібних елементів і видаляйте їх після циклу.
-//
-// Винятки:
-//  * emplace має строгу гарантію: якщо конструктор T кидає виняток, контейнер
-//    і вільні слоти не змінюються.
-//  * erase є noexcept рівно тоді, коли move-присвоєння T є noexcept. Якщо воно
-//    все ж кине, структура контейнера лишається узгодженою (елемент не
-//    видалено), а значення елемента, що видаляється, невизначене.
 template <typename T>
   requires SlotMapValue<T>
 class SlotMap {
@@ -69,10 +39,6 @@ private:
   std::vector<std::uint32_t> dense_to_sparse_;
   std::uint32_t free_head_{k_invalid_index};
 
-  friend struct SlotMapTestAccess;
-
-  // Після move стан джерела має бути коректним порожнім контейнером, зокрема
-  // free_head_ не повинен вказувати на слот, якого вже немає.
   constexpr void reset() noexcept {
     dense_.clear();
     slots_.clear();
@@ -80,7 +46,6 @@ private:
     free_head_ = k_invalid_index;
   }
 
-  // Гарантує місце ще для одного елемента, щоб подальший push_back не кидав.
   template <typename U>
   static constexpr void reserve_one_more(std::vector<U> &vec) {
     if (vec.size() == vec.capacity()) {
@@ -120,14 +85,11 @@ public:
     if (!reuse && slots_.size() >= k_invalid_index) {
       throw std::length_error("SlotMap: slot index space exhausted");
     }
-    // Усе, що може кинути bad_alloc, виконуємо до побудови T і до зміни
-    // будь-якого стану. Після emplace_back далі нічого не кидає.
     reserve_one_more(dense_to_sparse_);
     if (!reuse) {
       reserve_one_more(slots_);
     }
     dense_.emplace_back(std::forward<Args>(args)...);
-
     std::uint32_t slot_index = free_head_;
     if (reuse) {
       free_head_ = slots_[slot_index].next_free_;
@@ -144,8 +106,8 @@ public:
 
   constexpr Handle insert(T value) { return emplace(std::move(value)); }
 
-  constexpr bool erase(Handle handle) noexcept(
-      std::is_nothrow_move_assignable_v<T>) {
+  constexpr bool
+  erase(Handle handle) noexcept(std::is_nothrow_move_assignable_v<T>) {
     if (!is_valid(handle)) {
       return false;
     }
@@ -153,7 +115,6 @@ public:
     const std::uint32_t del_index = slot.dense_index_;
     const auto last_el_index = static_cast<std::uint32_t>(dense_.size() - 1);
     if (del_index != last_el_index) {
-      // Єдине місце, що може кинути виняток; стан ще не змінено.
       dense_[del_index] = std::move(dense_[last_el_index]);
       const std::uint32_t last_slot_index = dense_to_sparse_[last_el_index];
       dense_to_sparse_[del_index] = last_slot_index;
@@ -167,8 +128,6 @@ public:
       slot.next_free_ = free_head_;
       free_head_ = handle.index_;
     }
-    // Інакше покоління вичерпано: слот назавжди виведено з обігу, щоб
-    // застарілий дескриптор не став знову дійсним після переповнення.
     return true;
   }
 
@@ -192,7 +151,6 @@ public:
     return &dense_[slots_[handle.index_].dense_index_];
   }
 
-  // Дескриптор має бути дійсним (перевіряється assert-ом у Debug).
   [[nodiscard]] constexpr T &operator[](Handle handle) {
     assert(is_valid(handle));
     return dense_[slots_[handle.index_].dense_index_];
