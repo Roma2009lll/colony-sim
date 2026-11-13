@@ -14,11 +14,11 @@ inline constexpr NodeId k_invalid_node = std::numeric_limits<NodeId>::max();
 inline constexpr Cost k_invalid_cost = std::numeric_limits<Cost>::max();
 
 struct PathView {
-  std::span<const NodeId> path{};
-  Cost total_cost{0};
-  std::size_t expanded_nodes{0};
+  std::span<const NodeId> path_{};
+  Cost total_cost_{0};
+  std::size_t expanded_nodes_{0};
 
-  [[nodiscard]] constexpr bool found() const noexcept { return !path.empty(); }
+  [[nodiscard]] constexpr bool found() const noexcept { return !path_.empty(); }
 };
 
 template <typename G>
