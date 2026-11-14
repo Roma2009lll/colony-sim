@@ -51,7 +51,7 @@ public:
   void for_each_neighbor(pathfinding::NodeId u, CallBack &&func) const {
     if (static_cast<std::size_t>(u) >= this->node_count()) {
       return;
-    }
+    } 
     static constexpr std::array<util::Cell, 4> k_dirs{
         {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}};
     const util::Cell current = this->to_cell(u);
