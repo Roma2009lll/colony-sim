@@ -1,7 +1,6 @@
 #pragma once
 
 #include "colony/pathfinding/GraphConcept.hpp"
-#include "colony/pathfinding/GridGraph.hpp"
 
 #include <algorithm>
 #include <cstddef>
