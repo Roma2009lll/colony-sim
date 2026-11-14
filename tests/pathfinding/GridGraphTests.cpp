@@ -90,5 +90,17 @@ TEST(GridGraphTest, ForEachNeighborRespectsBoundsAndObstacles) {
   EXPECT_EQ(invalid_calls, 0U);
 }
 
+TEST(GridGraphTest, EmptyGridHasNoNodesAndConversionsAreSafe) {
+  util::Grid<int> grid;
+  TestGridGraph graph(grid, WalkableZero{});
+  EXPECT_EQ(graph.node_count(), 0U);
+  EXPECT_FALSE(graph.is_walkable(0));
+  EXPECT_EQ(graph.to_cell(0), (util::Cell{0, 0}));
+  EXPECT_EQ(graph.heuristic(0, 0), Cost{0});
+  std::size_t calls = 0;
+  graph.for_each_neighbor(0, [&](NodeId, Cost) { ++calls; });
+  EXPECT_EQ(calls, 0U);
+}
+
 } // namespace
 } // namespace colony::pathfinding::test

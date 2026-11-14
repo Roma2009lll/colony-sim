@@ -26,6 +26,9 @@ public:
   }
 
   constexpr util::Cell to_cell(NodeId node_id) const {
+    if (grid_.width() == 0) {
+      return util::Cell{0, 0};
+    }
     return util::Cell{static_cast<std::int32_t>(node_id % grid_.width()),
                       static_cast<std::int32_t>(node_id / grid_.width())};
   }
@@ -51,7 +54,7 @@ public:
   void for_each_neighbor(pathfinding::NodeId u, CallBack &&func) const {
     if (static_cast<std::size_t>(u) >= this->node_count()) {
       return;
-    } 
+    }
     static constexpr std::array<util::Cell, 4> k_dirs{
         {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}};
     const util::Cell current = this->to_cell(u);
