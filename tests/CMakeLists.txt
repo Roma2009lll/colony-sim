@@ -19,6 +19,9 @@ add_executable(unit_tests
     world/WorldTests.cpp
     agents/AgentTests.cpp
     agents/NeedsTests.cpp
+    pathfinding/AStarTests.cpp
+    pathfinding/BFSTest.cpp
+    pathfinding/GridGraphTests.cpp
 )
 
 target_compile_features(unit_tests PRIVATE cxx_std_20)

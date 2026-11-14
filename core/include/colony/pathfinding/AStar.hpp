@@ -61,13 +61,16 @@ public:
     if (start >= count || goal >= count) {
       return PathView{};
     }
+    if (!graph.is_walkable(start) || !graph.is_walkable(goal)) {
+      return PathView{};
+    }
     if (start == goal) {
       path_buffer_.clear();
       path_buffer_.push_back(start);
       return PathView{
-          .path = path_buffer_,
-          .total_cost = 0,
-          .expanded_nodes = 0,
+          .path_ = path_buffer_,
+          .total_cost_ = 0,
+          .expanded_nodes_ = 0,
       };
     }
     prepare(count);
@@ -111,9 +114,9 @@ public:
     }
     std::reverse(path_buffer_.begin(), path_buffer_.end());
     return PathView{
-        .path = path_buffer_,
-        .total_cost = g_score_[goal],
-        .expanded_nodes = expanded_nodes,
+        .path_ = path_buffer_,
+        .total_cost_ = g_score_[goal],
+        .expanded_nodes_ = expanded_nodes,
     };
   }
 };
