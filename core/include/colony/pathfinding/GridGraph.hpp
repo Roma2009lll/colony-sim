@@ -26,6 +26,10 @@ public:
   }
 
   constexpr util::Cell to_cell(NodeId node_id) const {
+    // Порожня сітка не має вузлів; без цієї перевірки було б ділення на нуль.
+    if (grid_.width() == 0) {
+      return util::Cell{0, 0};
+    }
     return util::Cell{static_cast<std::int32_t>(node_id % grid_.width()),
                       static_cast<std::int32_t>(node_id / grid_.width())};
   }
