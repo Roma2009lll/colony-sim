@@ -3,10 +3,12 @@
 #include <cstdint>
 
 #include <colony/agents/Needs.hpp>
+#include <colony/tasks/Task.hpp>
 #include <colony/util/Grid.hpp>
 #include <colony/world/Tile.hpp>
 
 namespace colony::agents {
+
 enum class AgentIntent : std::uint8_t {
   Unknown,
   Idle,
@@ -30,6 +32,7 @@ private:
   AgentIntent intent_{AgentIntent::Unknown};
   colony::util::Cell target_cell_;
   Inventory inventory_;
+  colony::tasks::TaskId claimed_task_id_{colony::tasks::TaskId::invalid()};
 
 public:
   explicit constexpr Agent(std::uint32_t id,
@@ -37,6 +40,10 @@ public:
       : id_(id), position_(position) {}
 
   [[nodiscard]] constexpr std::uint32_t id() const noexcept { return id_; }
+
+  [[nodiscard]] constexpr colony::tasks::AgentId agent_id() const noexcept {
+    return colony::tasks::AgentId{id_};
+  }
 
   [[nodiscard]] constexpr colony::util::Cell position() const noexcept {
     return position_;
@@ -91,6 +98,23 @@ public:
   constexpr void clear_inventory() noexcept {
     inventory_.resource = colony::world::ResourceType::None;
     inventory_.resource_amount = 0;
+  }
+
+  [[nodiscard]] constexpr colony::tasks::TaskId
+  claimed_task_id() const noexcept {
+    return claimed_task_id_;
+  }
+
+  [[nodiscard]] constexpr bool has_claimed_task() const noexcept {
+    return claimed_task_id_.is_valid();
+  }
+
+  constexpr void set_claimed_task(colony::tasks::TaskId task_id) noexcept {
+    claimed_task_id_ = task_id;
+  }
+
+  constexpr void clear_claimed_task() noexcept {
+    claimed_task_id_ = colony::tasks::TaskId::invalid();
   }
 };
 
