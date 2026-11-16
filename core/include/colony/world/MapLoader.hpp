@@ -36,9 +36,6 @@ private:
 public:
   MapLoader() = delete;
 
-  // Символи: '#' стіна, '.' земля, 'S' склад, 'F' їжа, 'T' дерево, '@' старт.
-  // Кінці рядків: \n або \r\n; порожні рядки в кінці та UTF-8 BOM ігноруються.
-  // Вхідний текст не змінюється.
   static std::variant<World, MapParseError>
   load_from_string(std::string_view content);
 

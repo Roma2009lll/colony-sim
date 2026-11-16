@@ -24,11 +24,17 @@ enum class TaskError : std::uint8_t {
   AlreadyClaimed,
   NotClaimed,
   WrongAgent,
-  AlreadyTerminal
+  AlreadyTerminal,
+  OutOfBounds,
+  NoResource,
+  DuplicateDirective
 };
 
 struct TaskResult {
+
   TaskError error{TaskError::None};
+
+  TaskId task_id{TaskId::invalid()};
 
   [[nodiscard]] constexpr bool ok() const noexcept {
     return error == TaskError::None;
