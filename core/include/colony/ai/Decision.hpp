@@ -33,5 +33,5 @@ struct Decision {
 [[nodiscard]] Decision decide(const agents::Agent &agent,
                               const world::World &world,
                               const tasks::TaskBoard &task_board,
-                              PriorityPolicy policy, util::Rng &rng) {};
+                              PriorityPolicy policy, util::Rng &rng);
 } // namespace colony::ai

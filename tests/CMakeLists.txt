@@ -22,6 +22,10 @@ add_executable(unit_tests
     pathfinding/AStarTests.cpp
     pathfinding/BFSTest.cpp
     pathfinding/GridGraphTests.cpp
+    tasks/PriorityPolicyTests.cpp
+    tasks/TaskBoardTests.cpp
+    tasks/TaskTests.cpp
+    ai/DecisionTest.cpp
 )
 
 target_compile_features(unit_tests PRIVATE cxx_std_20)

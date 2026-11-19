@@ -44,6 +44,8 @@ TEST(NeedsTest, NegativeHungerClamp) {
   Needs needs;
   needs.apply_hunger(50.0f);
   needs.apply_hunger(-100.0f);
+  EXPECT_FLOAT_EQ(needs.hunger, 50.0f);
+  needs.eat(100.0f);
   EXPECT_FLOAT_EQ(needs.hunger, 0.0f);
   EXPECT_FALSE(needs.is_starving());
   EXPECT_FALSE(needs.is_dead());
