@@ -8,7 +8,7 @@
 
 namespace colony::world {
 class World {
-private:
+private: 
   util::Grid<Tile> grid_;
   util::Cell start_position_{0, 0};
   std::uint32_t stored_food_{0};

@@ -1,6 +1,6 @@
 add_library(colony_core STATIC
-    src/placeholder.cpp
     src/world/MapLoader.cpp
+    src/decision/Decision.cpp
 )
 
 target_include_directories(colony_core PUBLIC

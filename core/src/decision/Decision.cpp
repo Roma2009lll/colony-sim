@@ -1,0 +1,105 @@
+#include <colony/ai/Decision.hpp>
+
+namespace colony::ai {
+namespace {
+[[nodiscard]] std::uint32_t manhattan_distance(util::Cell a,
+                                               util::Cell b) noexcept {
+  const auto dx = std::abs(static_cast<int>(a.x) - static_cast<int>(b.x));
+  const auto dy = std::abs(static_cast<int>(a.y) - static_cast<int>(b.y));
+  return static_cast<std::uint32_t>(dx + dy);
+}
+
+[[nodiscard]] bool in_reach(util::Cell agent_pos, util::Cell target) noexcept {
+  return manhattan_distance(agent_pos, target) <= 1;
+}
+
+[[nodiscard]] std::optional<util::Cell>
+find_nearest_food(util::Cell from, const world::World &world) noexcept {
+  if (!world.in_bounds(from)) {
+    return std::nullopt;
+  }
+  std::optional<util::Cell> best_cell = std::nullopt;
+  std::uint32_t best_dist = std::numeric_limits<std::uint32_t>::max();
+  for (std::size_t y = 0; y < world.height(); ++y) {
+    for (std::size_t x = 0; x < world.width(); ++x) {
+      util::Cell cell{static_cast<decltype(util::Cell::x)>(x),
+                      static_cast<decltype(util::Cell::y)>(y)};
+      const auto &tile = world[cell];
+      const bool has_bush_food =
+          tile.resource == world::ResourceType::Food && tile.has_resource();
+      if (has_bush_food) {
+        const std::uint32_t dist = manhattan_distance(from, cell);
+        if (dist < best_dist) {
+          best_dist = dist;
+          best_cell = cell;
+        }
+      }
+    }
+  }
+  return best_cell;
+}
+
+[[nodiscard]] std::optional<util::Cell>
+find_nearest_storage(util::Cell from, const world::World &world) noexcept {
+  if (!world.in_bounds(from)) {
+    return std::nullopt;
+  }
+  std::optional<util::Cell> best_cell = std::nullopt;
+  std::uint32_t best_dist = std::numeric_limits<std::uint32_t>::max();
+  for (std::size_t y = 0; y < world.height(); ++y) {
+    for (std::size_t x = 0; x < world.width(); ++x) {
+      util::Cell cell{static_cast<decltype(util::Cell::x)>(x),
+                      static_cast<decltype(util::Cell::y)>(y)};
+      if (world[cell].terrain == world::TerrainType::Storage) {
+        const std::uint32_t dist = manhattan_distance(from, cell);
+        if (dist < best_dist) {
+          best_dist = dist;
+          best_cell = cell;
+        }
+      }
+    }
+  }
+  return best_cell;
+}
+
+[[nodiscard]] const tasks::Task *
+find_claimed_task(tasks::AgentId id, const tasks::TaskBoard &task_board) {
+  for (const auto &it : task_board.task_board()) {
+    if (it.assignee == id && it.state == tasks::TaskState::Claimed) {
+      return &it;
+    }
+  }
+  return nullptr;
+}
+
+const tasks::Task *find_nearest_open_task(
+    util::Cell from, const tasks::TaskBoard &board,
+    tasks::TaskPriority priority,
+    std::optional<world::ResourceType> resource_filter) noexcept {
+  const tasks::Task *best_task = nullptr;
+  std::uint32_t best_dist = std::numeric_limits<std::uint32_t>::max();
+  for (const auto &task : board.task_board()) {
+    if (task.state != tasks::TaskState::Open) {
+      continue;
+    }
+    if (task.priority != priority) {
+      continue;
+    }
+    if (resource_filter.has_value() && task.resource != *resource_filter) {
+      continue;
+    }
+    const std::uint32_t dist = manhattan_distance(from, task.target_cell);
+    if (dist < best_dist || (dist == best_dist && best_task != nullptr &&
+                             task.id.value() < best_task->id.value())) {
+      best_dist = dist;
+      best_task = &task;
+    }
+  }
+  return best_task;
+}
+
+} // namespace
+Decision decide(const agents::Agent &agent, const world::World &world,
+                const tasks::TaskBoard &task_board, PriorityPolicy policy,
+                util::Rng &rng) {}
+} // namespace colony::ai

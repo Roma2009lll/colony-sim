@@ -22,7 +22,7 @@ struct Cell {
   [[nodiscard]] constexpr bool operator!=(const Cell &other) const noexcept {
     return !(*this == other);
   }
-
+ 
   [[nodiscard]] constexpr bool operator<(const Cell &other) const noexcept {
     return x < other.x || (x == other.x && y < other.y);
   }
