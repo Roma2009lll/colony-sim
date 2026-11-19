@@ -27,7 +27,10 @@ find_nearest_food(util::Cell from, const world::World &world) noexcept {
       const auto &tile = world[cell];
       const bool has_bush_food =
           tile.resource == world::ResourceType::Food && tile.has_resource();
-      if (has_bush_food) {
+      const bool has_stored_food =
+          tile.terrain == world::TerrainType::Storage &&
+          world.stored_food() > 0;
+      if (has_bush_food || has_stored_food) {
         const std::uint32_t dist = manhattan_distance(from, cell);
         if (dist < best_dist) {
           best_dist = dist;
@@ -101,5 +104,55 @@ const tasks::Task *find_nearest_open_task(
 } // namespace
 Decision decide(const agents::Agent &agent, const world::World &world,
                 const tasks::TaskBoard &task_board, PriorityPolicy policy,
-                util::Rng &rng) {}
+                util::Rng &rng) {
+  if (agent.is_dead()) {
+    return Decision{};
+  }
+  if (agent.needs().is_hungry()) {
+    if (const auto food_cell = find_nearest_food(agent.position(), world);
+        food_cell.has_value()) {
+      if (in_reach(agent.position(), *food_cell)) {
+        return Decision{ActionType::Eat, *food_cell};
+      }
+      return Decision{ActionType::MoveStep, *food_cell};
+    }
+  }
+  if (agent.has_resource()) {
+    if (const auto storage_cell = find_nearest_storage(agent.position(), world);
+        storage_cell.has_value()) {
+      if (in_reach(agent.position(), *storage_cell)) {
+        return Decision{ActionType::Deliver, *storage_cell};
+      }
+      return Decision{ActionType::MoveStep, *storage_cell};
+    }
+  }
+  if (const tasks::Task *claimed =
+          find_claimed_task(agent.agent_id(), task_board);
+      claimed != nullptr) {
+    if (in_reach(agent.position(), claimed->target_cell)) {
+      return Decision{ActionType::Gather, claimed->target_cell, claimed->id};
+    }
+    return Decision{ActionType::MoveStep, claimed->target_cell, claimed->id};
+  }
+  const tasks::Task *chosen_task =
+      find_nearest_open_task(agent.position(), task_board,
+                             tasks::TaskPriority::Directive, std::nullopt);
+  if (chosen_task == nullptr) {
+    const bool prefer_food = rng.range(0, 99) < policy.food_weight_;
+    const auto primary_res =
+        prefer_food ? world::ResourceType::Food : world::ResourceType::Wood;
+    chosen_task = find_nearest_open_task(
+        agent.position(), task_board, tasks::TaskPriority::Normal, primary_res);
+    if (chosen_task == nullptr) {
+      chosen_task =
+          find_nearest_open_task(agent.position(), task_board,
+                                 tasks::TaskPriority::Normal, std::nullopt);
+    }
+  }
+  if (chosen_task != nullptr) {
+    return Decision{ActionType::ClaimTask, chosen_task->target_cell,
+                    chosen_task->id};
+  }
+  return Decision{};
+}
 } // namespace colony::ai
