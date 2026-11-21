@@ -6,6 +6,7 @@
 #include <optional>
 
 #include <colony/agents/Agent.hpp>
+#include <colony/tasks/PriorityPolicy.hpp>
 #include <colony/tasks/Task.hpp>
 #include <colony/tasks/TaskBoard.hpp>
 #include <colony/util/Grid.hpp>
@@ -13,9 +14,8 @@
 #include <colony/world/World.hpp>
 
 namespace colony::ai {
-struct PriorityPolicy {
-  std::uint8_t food_weight_{50};
-};
+using tasks::PriorityPolicy;
+
 enum class ActionType : std::uint8_t {
   Idle,
   MoveStep,

@@ -10,6 +10,7 @@
 #include <colony/world/World.hpp>
 
 #include <cstdint>
+#include <type_traits>
 
 namespace {
 
@@ -26,6 +27,11 @@ using colony::util::Rng;
 using colony::world::ResourceType;
 using colony::world::TerrainType;
 using colony::world::World;
+
+static_assert(std::is_same_v<colony::ai::PriorityPolicy,
+                             colony::tasks::PriorityPolicy>,
+              "decide() must use the same PriorityPolicy as the rest of the "
+              "task system");
 
 class DecisionTest : public ::testing::Test {
 protected:
@@ -165,6 +171,32 @@ TEST_F(DecisionTest, PriorityPolicySelectsResourceType) {
   const Decision wood_d = decide(agent, world, board, PriorityPolicy{0}, rng);
   EXPECT_EQ(wood_d.action, ActionType::ClaimTask);
   EXPECT_EQ(wood_d.target_cell, wood_cell);
+}
+
+TEST_F(DecisionTest, PriorityPolicyWeightControlsShareOfChosenResource) {
+  const Cell food_cell{2, 4};
+  const Cell wood_cell{4, 2};
+  place_resource(food_cell, ResourceType::Food, 5);
+  place_resource(wood_cell, ResourceType::Wood, 5);
+  board.sync_with_world(world);
+  Agent agent{1, Cell{2, 2}};
+  const auto food_share = [&](PriorityPolicy policy) {
+    Rng local_rng{2024};
+    constexpr int k_draws = 4000;
+    int food = 0;
+    for (int i = 0; i < k_draws; ++i) {
+      if (decide(agent, world, board, policy, local_rng).target_cell ==
+          food_cell) {
+        ++food;
+      }
+    }
+    return static_cast<double>(food) / k_draws;
+  };
+  EXPECT_DOUBLE_EQ(food_share(PriorityPolicy{0}), 0.0);
+  EXPECT_DOUBLE_EQ(food_share(PriorityPolicy{100}), 1.0);
+  EXPECT_DOUBLE_EQ(food_share(PriorityPolicy{1000}), 1.0);
+  EXPECT_NEAR(food_share(PriorityPolicy{70}), 0.7, 0.05);
+  EXPECT_NEAR(food_share(PriorityPolicy{25}), 0.25, 0.05);
 }
 
 TEST_F(DecisionTest, FallsBackToSecondaryResourceWhenPreferredUnavailable) {
