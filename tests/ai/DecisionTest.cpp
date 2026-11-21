@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <type_traits>
+#include <vector>
 
 namespace {
 
@@ -28,10 +29,10 @@ using colony::world::ResourceType;
 using colony::world::TerrainType;
 using colony::world::World;
 
-static_assert(std::is_same_v<colony::ai::PriorityPolicy,
-                             colony::tasks::PriorityPolicy>,
-              "decide() must use the same PriorityPolicy as the rest of the "
-              "task system");
+static_assert(
+    std::is_same_v<colony::ai::PriorityPolicy, colony::tasks::PriorityPolicy>,
+    "decide() must use the same PriorityPolicy as the rest of the "
+    "task system");
 
 class DecisionTest : public ::testing::Test {
 protected:
@@ -223,6 +224,147 @@ TEST_F(DecisionTest, TieBreaksEqualDistanceByLowestTaskId) {
   EXPECT_EQ(d.action, ActionType::ClaimTask);
   EXPECT_EQ(d.task_id, first_id);
   EXPECT_EQ(d.target_cell, first_cell);
+}
+
+TEST_F(DecisionTest, OnlyOneColonistPerDirective) {
+  const Cell directive_cell{6, 6};
+  const Cell normal_cell{1, 2};
+  place_resource(directive_cell, ResourceType::Wood, 5);
+  place_resource(normal_cell, ResourceType::Wood, 5);
+  board.sync_with_world(world);
+  const auto dir = board.create_directive(world, directive_cell);
+  ASSERT_EQ(dir.error, TaskError::None);
+  Agent first{1, Cell{2, 2}};
+  Agent second{2, Cell{2, 2}};
+  ASSERT_EQ(board.claim(dir.task_id, first.agent_id()).error, TaskError::None);
+  const Decision d1 = decide(first, world, board, PriorityPolicy{50}, rng);
+  EXPECT_EQ(d1.target_cell, directive_cell);
+  EXPECT_EQ(d1.task_id, dir.task_id);
+  const Decision d2 = decide(second, world, board, PriorityPolicy{50}, rng);
+  EXPECT_EQ(d2.action, ActionType::ClaimTask);
+  EXPECT_EQ(d2.target_cell, normal_cell);
+}
+
+TEST_F(DecisionTest, NewDirectiveDoesNotPreemptAlreadyClaimedTask) {
+  const Cell claimed_cell{1, 2};
+  const Cell directive_cell{8, 8};
+  place_resource(claimed_cell, ResourceType::Wood, 5);
+  place_resource(directive_cell, ResourceType::Wood, 5);
+  board.sync_with_world(world);
+  Agent agent{1, Cell{2, 2}};
+  const TaskId claimed_id = board.active_task_at(claimed_cell)->id;
+  ASSERT_EQ(board.claim(claimed_id, agent.agent_id()).error, TaskError::None);
+  ASSERT_EQ(board.create_directive(world, directive_cell).error,
+            TaskError::None);
+  const Decision d = decide(agent, world, board, PriorityPolicy{50}, rng);
+  EXPECT_EQ(d.task_id, claimed_id);
+  EXPECT_EQ(d.target_cell, claimed_cell);
+}
+
+TEST_F(DecisionTest, DirectiveOnClaimedCellDropsClaimAndAgentTakesDirective) {
+  const Cell cell{4, 4};
+  place_resource(cell, ResourceType::Wood, 5);
+  board.sync_with_world(world);
+  Agent agent{1, Cell{2, 2}};
+  ASSERT_EQ(board.claim(board.active_task_at(cell)->id, agent.agent_id()).error,
+            TaskError::None);
+  const auto dir = board.create_directive(world, cell);
+  ASSERT_EQ(dir.error, TaskError::None);
+  const Decision d = decide(agent, world, board, PriorityPolicy{50}, rng);
+  EXPECT_EQ(d.action, ActionType::ClaimTask);
+  EXPECT_EQ(d.task_id, dir.task_id);
+}
+
+TEST_F(DecisionTest,
+       AgentCarryingResourceDeliversEvenIfItsDirectiveWasExhausted) {
+  const Cell cell{5, 5};
+  place_resource(cell, ResourceType::Wood, 1);
+  const auto dir = board.create_directive(world, cell);
+  ASSERT_EQ(dir.error, TaskError::None);
+  Agent agent{1, Cell{5, 4}};
+  ASSERT_EQ(board.claim(dir.task_id, agent.agent_id()).error, TaskError::None);
+  agent.set_inventory(ResourceType::Wood, 1);
+  world[cell].resource_amount = 0;
+  board.sync_with_world(world);
+  ASSERT_EQ(board.find_task(dir.task_id)->state,
+            colony::tasks::TaskState::Cancelled);
+  const Decision d = decide(agent, world, board, PriorityPolicy{50}, rng);
+  EXPECT_EQ(d.action, ActionType::MoveStep);
+  EXPECT_EQ(d.target_cell, (Cell{0, 0}));
+  EXPECT_FALSE(d.task_id.is_valid());
+}
+
+TEST_F(DecisionTest, FoodShortageDoesNotChangePrioritiesByItself) {
+  const Cell food_cell{2, 4};
+  const Cell wood_cell{4, 2};
+  place_resource(food_cell, ResourceType::Food, 5);
+  place_resource(wood_cell, ResourceType::Wood, 5);
+  board.sync_with_world(world);
+  Agent agent{1, Cell{2, 2}};
+  while (agent.needs().hunger < 69.0f) {
+    agent.needs().tick();
+  }
+  ASSERT_FALSE(agent.needs().is_hungry());
+  const auto targets = [&](PriorityPolicy policy) {
+    Rng local_rng{99};
+    std::vector<Cell> result;
+    for (int i = 0; i < 200; ++i) {
+      result.push_back(
+          decide(agent, world, board, policy, local_rng).target_cell);
+    }
+    return result;
+  };
+  const auto with_empty_storage = targets(PriorityPolicy{0});
+  world.add_stored_food(1000);
+  const auto with_full_storage = targets(PriorityPolicy{0});
+  EXPECT_EQ(with_empty_storage, with_full_storage);
+  for (const Cell &c : with_empty_storage) {
+    EXPECT_EQ(c, wood_cell);
+  }
+  const auto food_biased = targets(PriorityPolicy{100});
+  for (const Cell &c : food_biased) {
+    EXPECT_EQ(c, food_cell);
+  }
+}
+
+TEST_F(DecisionTest, DecideIsDeterministicAndLeavesInputsUntouched) {
+  for (int i = 1; i < 9; ++i) {
+    place_resource(Cell{i, 3},
+                   (i % 2) ? ResourceType::Food : ResourceType::Wood, 4);
+  }
+  board.sync_with_world(world);
+  const auto dir = board.create_directive(world, Cell{8, 3});
+  ASSERT_EQ(dir.error, TaskError::None);
+  ASSERT_EQ(board.claim(dir.task_id, colony::tasks::AgentId{99}).error,
+            TaskError::None);
+  Agent agent{1, Cell{4, 5}};
+  agent.needs().apply_hunger(10.0f);
+  const auto board_before = std::vector<colony::tasks::Task>(
+      board.task_board().begin(), board.task_board().end());
+  const auto pos_before = agent.position();
+  const auto hunger_before = agent.needs().hunger;
+  const auto food_before = world.stored_food();
+  Rng a{7};
+  Rng b{7};
+  for (int i = 0; i < 500; ++i) {
+    const Decision x = decide(agent, world, board, PriorityPolicy{50}, a);
+    const Decision y = decide(agent, world, board, PriorityPolicy{50}, b);
+    ASSERT_EQ(x.action, y.action);
+    ASSERT_EQ(x.target_cell, y.target_cell);
+    ASSERT_EQ(x.task_id, y.task_id);
+  }
+  ASSERT_EQ(board.size(), board_before.size());
+  for (std::size_t i = 0; i < board_before.size(); ++i) {
+    const auto &now = board.task_board()[i];
+    EXPECT_EQ(now.id, board_before[i].id);
+    EXPECT_EQ(now.state, board_before[i].state);
+    EXPECT_EQ(now.assignee, board_before[i].assignee);
+    EXPECT_EQ(now.priority, board_before[i].priority);
+    EXPECT_EQ(now.target_cell, board_before[i].target_cell);
+  }
+  EXPECT_EQ(agent.position(), pos_before);
+  EXPECT_EQ(agent.needs().hunger, hunger_before);
+  EXPECT_EQ(world.stored_food(), food_before);
 }
 
 TEST_F(DecisionTest, ReturnsIdleWhenNoTasksAvailable) {
