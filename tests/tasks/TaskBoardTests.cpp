@@ -146,6 +146,8 @@ TEST_F(TaskBoardTest, ClaimLifecycleAndErrors) {
   EXPECT_EQ(board.claim(TaskId::invalid(), AgentId{1}).error,
             TaskError::TaskNotFound);
   EXPECT_EQ(board.claim(TaskId{42}, AgentId{1}).error, TaskError::TaskNotFound);
+  EXPECT_EQ(board.claim(id, AgentId::invalid()).error, TaskError::InvalidAgent);
+  EXPECT_TRUE(board.find_task(id)->is_open());
   const auto ok = board.claim(id, AgentId{1});
   EXPECT_EQ(ok.error, TaskError::None);
   EXPECT_EQ(ok.task_id, id);

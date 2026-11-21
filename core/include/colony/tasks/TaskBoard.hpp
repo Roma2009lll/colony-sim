@@ -59,6 +59,9 @@ public:
   }
 
   [[nodiscard]] TaskResult claim(TaskId task_id, AgentId agent_id) noexcept {
+    if (!agent_id.is_valid()) {
+      return TaskResult{TaskError::InvalidAgent, task_id};
+    }
     auto [task, error] = find_active_mutable(task_id);
     if (error != TaskError::None) {
       return TaskResult{error, task_id};
