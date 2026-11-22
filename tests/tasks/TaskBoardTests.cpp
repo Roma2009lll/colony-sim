@@ -146,6 +146,8 @@ TEST_F(TaskBoardTest, ClaimLifecycleAndErrors) {
   EXPECT_EQ(board.claim(TaskId::invalid(), AgentId{1}).error,
             TaskError::TaskNotFound);
   EXPECT_EQ(board.claim(TaskId{42}, AgentId{1}).error, TaskError::TaskNotFound);
+  EXPECT_EQ(board.claim(id, AgentId::invalid()).error, TaskError::InvalidAgent);
+  EXPECT_TRUE(board.find_task(id)->is_open());
   const auto ok = board.claim(id, AgentId{1});
   EXPECT_EQ(ok.error, TaskError::None);
   EXPECT_EQ(ok.task_id, id);
@@ -204,6 +206,57 @@ TEST_F(TaskBoardTest, CompleteAndCancelLifecycle) {
   EXPECT_EQ(board.cancel(t2).error, TaskError::None);
   EXPECT_EQ(board.find_task(t2)->state, TaskState::Cancelled);
   EXPECT_EQ(board.find_task(t2)->assignee, AgentId::invalid());
+}
+
+TEST_F(TaskBoardTest, DeathOfAssigneeReturnsDirectiveToWaiting) {
+  const Cell cell{2, 2};
+  place_resource(cell, ResourceType::Wood, 5);
+  const auto res = board.create_directive(world, cell);
+  ASSERT_EQ(res.error, TaskError::None);
+  ASSERT_EQ(board.claim(res.task_id, AgentId{3}).error, TaskError::None);
+  board.release_all_by_agent(AgentId{3});
+  const Task *directive = board.find_task(res.task_id);
+  ASSERT_NE(directive, nullptr);
+  EXPECT_EQ(directive->state, TaskState::Open);
+  EXPECT_EQ(directive->priority, TaskPriority::Directive);
+  EXPECT_EQ(directive->assignee, AgentId::invalid());
+  EXPECT_EQ(board.active_task_at(cell), directive);
+  EXPECT_EQ(board.size(), 1u);
+  EXPECT_EQ(board.claim(res.task_id, AgentId{4}).error, TaskError::None);
+}
+
+TEST_F(TaskBoardTest, DepletedNodeCancelsDirectiveAndRegrowthMakesNormalTask) {
+  const Cell cell{2, 2};
+  place_resource(cell, ResourceType::Food, 5);
+  const auto res = board.create_directive(world, cell);
+  ASSERT_EQ(res.error, TaskError::None);
+  ASSERT_EQ(board.claim(res.task_id, AgentId{1}).error, TaskError::None);
+  world[cell].resource_amount = 0;
+  board.sync_with_world(world);
+  const Task *directive = board.find_task(res.task_id);
+  ASSERT_NE(directive, nullptr);
+  EXPECT_EQ(directive->state, TaskState::Cancelled);
+  EXPECT_EQ(directive->assignee, AgentId::invalid());
+  EXPECT_FALSE(board.has_active_task_at(cell));
+  EXPECT_EQ(board.create_directive(world, cell).error, TaskError::NoResource);
+  world[cell].resource_amount = 5;
+  board.sync_with_world(world);
+  const Task *regrown = board.active_task_at(cell);
+  ASSERT_NE(regrown, nullptr);
+  EXPECT_EQ(regrown->priority, TaskPriority::Normal);
+  EXPECT_NE(regrown->id, res.task_id);
+}
+
+TEST_F(TaskBoardTest, DirectiveCanBeCreatedAgainAfterItWasCompleted) {
+  const Cell cell{3, 3};
+  place_resource(cell, ResourceType::Wood, 9);
+  const auto first = board.create_directive(world, cell);
+  ASSERT_EQ(first.error, TaskError::None);
+  ASSERT_EQ(board.claim(first.task_id, AgentId{1}).error, TaskError::None);
+  ASSERT_EQ(board.complete(first.task_id, AgentId{1}).error, TaskError::None);
+  const auto second = board.create_directive(world, cell);
+  ASSERT_EQ(second.error, TaskError::None);
+  EXPECT_NE(second.task_id, first.task_id);
 }
 
 } // namespace

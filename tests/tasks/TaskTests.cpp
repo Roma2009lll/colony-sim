@@ -58,6 +58,7 @@ TEST(TaskResultTest, DefaultAndErrorStates) {
       TaskError::NotClaimed,      TaskError::WrongAgent,
       TaskError::AlreadyTerminal, TaskError::OutOfBounds,
       TaskError::NoResource,      TaskError::DuplicateDirective,
+      TaskError::InvalidAgent,
   };
   for (const auto err : all_errors) {
     const TaskResult err_res{err, TaskId{3}};

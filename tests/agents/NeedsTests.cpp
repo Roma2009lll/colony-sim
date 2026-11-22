@@ -1,6 +1,8 @@
 #include <colony/agents/Needs.hpp>
 #include <gtest/gtest.h>
 
+#include <limits>
+
 namespace colony::agents {
 namespace {
 TEST(NeedsTest, DefaultInitialization) {
@@ -49,6 +51,21 @@ TEST(NeedsTest, NegativeHungerClamp) {
   EXPECT_FLOAT_EQ(needs.hunger, 0.0f);
   EXPECT_FALSE(needs.is_starving());
   EXPECT_FALSE(needs.is_dead());
+}
+
+TEST(NeedsTest, NonFiniteAmountsDoNotCorruptState) {
+  constexpr float k_nan = std::numeric_limits<float>::quiet_NaN();
+  Needs needs;
+  needs.apply_hunger(80.0f);
+  needs.apply_hunger(k_nan);
+  EXPECT_FLOAT_EQ(needs.hunger, 80.0f);
+  EXPECT_TRUE(needs.is_starving());
+  needs.eat(k_nan);
+  EXPECT_FLOAT_EQ(needs.hunger, 80.0f);
+  needs.eat(-5.0f);
+  EXPECT_FLOAT_EQ(needs.hunger, 80.0f);
+  needs.apply_hunger(std::numeric_limits<float>::infinity());
+  EXPECT_TRUE(needs.is_dead());
 }
 
 } // namespace

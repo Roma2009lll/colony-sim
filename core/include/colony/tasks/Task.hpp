@@ -27,7 +27,8 @@ enum class TaskError : std::uint8_t {
   AlreadyTerminal,
   OutOfBounds,
   NoResource,
-  DuplicateDirective
+  DuplicateDirective,
+  InvalidAgent
 };
 
 struct TaskResult {
