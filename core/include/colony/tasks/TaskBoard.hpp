@@ -23,8 +23,7 @@ private:
     return const_cast<Task *>(find_task(id));
   }
 
-  [[nodiscard]] constexpr ActiveTaskLookup
-  find_active_mutable(TaskId id) noexcept {
+  [[nodiscard]] ActiveTaskLookup find_active_mutable(TaskId id) noexcept {
     Task *task = find_mutable(id);
     if (task == nullptr) {
       return {nullptr, TaskError::TaskNotFound};
@@ -60,6 +59,9 @@ public:
   }
 
   [[nodiscard]] TaskResult claim(TaskId task_id, AgentId agent_id) noexcept {
+    if (!agent_id.is_valid()) {
+      return TaskResult{TaskError::InvalidAgent, task_id};
+    }
     auto [task, error] = find_active_mutable(task_id);
     if (error != TaskError::None) {
       return TaskResult{error, task_id};
@@ -165,8 +167,8 @@ public:
     }
   }
 
-  [[nodiscard]]constexpr TaskResult create_directive(const world::World &world,
-                                        util::Cell cell) {
+  [[nodiscard]] TaskResult create_directive(const world::World &world,
+                                            util::Cell cell) {
     if (!world.in_bounds(cell)) {
       return TaskResult{TaskError::OutOfBounds};
     }

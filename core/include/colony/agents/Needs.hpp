@@ -25,7 +25,7 @@ struct Needs {
   }
 
   constexpr void apply_hunger(float amount) noexcept {
-    if (is_dead() || amount <= 0.0f) {
+    if (is_dead() || !(amount > 0.0f)) {
       return;
     }
     hunger = std::clamp(hunger + amount, 0.0f, kill_hunger);
@@ -39,7 +39,7 @@ struct Needs {
   }
 
   constexpr void eat(float nutrition) noexcept {
-    if (is_dead() || nutrition <= 0.0f) {
+    if (is_dead() || !(nutrition > 0.0f)) {
       return;
     }
     hunger = std::max(0.0f, hunger - nutrition);

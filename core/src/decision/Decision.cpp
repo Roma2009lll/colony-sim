@@ -138,7 +138,8 @@ Decision decide(const agents::Agent &agent, const world::World &world,
       find_nearest_open_task(agent.position(), task_board,
                              tasks::TaskPriority::Directive, std::nullopt);
   if (chosen_task == nullptr) {
-    const bool prefer_food = rng.range(0, 99) < policy.food_weight_;
+    const bool prefer_food =
+        rng.range(0, 99) < static_cast<std::int32_t>(policy.food_weight());
     const auto primary_res =
         prefer_food ? world::ResourceType::Food : world::ResourceType::Wood;
     chosen_task = find_nearest_open_task(
