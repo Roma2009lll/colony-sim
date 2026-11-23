@@ -46,7 +46,7 @@ public:
   [[nodiscard]] bool empty() const noexcept { return entries_.empty(); }
 
   void clear() noexcept { entries_.clear(); }
-
+ 
   void write_to(std::ostream &out) const;
   
   [[nodiscard]] std::string to_string() const;
