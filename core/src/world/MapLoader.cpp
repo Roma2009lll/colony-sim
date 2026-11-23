@@ -51,8 +51,6 @@ void colony::world::MapLoader::split_lines(
     std::string_view line = content.substr(0, newline);
     content.remove_prefix(newline == std::string_view::npos ? content.size()
                                                             : newline + 1);
-    // CRLF: прибираємо лише '\r' перед '\n'. Випадковий '\r' усередині рядка
-    // лишається й стане помилкою UnknownSymbol.
     if (!line.empty() && line.back() == '\r') {
       line.remove_suffix(1);
     }
@@ -119,8 +117,6 @@ colony::world::MapLoader::load_from_string(std::string_view content) {
   }
   std::vector<std::string_view> lines;
   split_lines(content, lines);
-  // Порожні рядки в кінці файлу ігноруємо; порожній рядок усередині карти
-  // лишається рядком нульової довжини й дає UnevenRows.
   while (!lines.empty() && lines.back().empty()) {
     lines.pop_back();
   }
