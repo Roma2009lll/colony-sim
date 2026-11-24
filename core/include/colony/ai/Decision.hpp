@@ -24,6 +24,7 @@ enum class ActionType : std::uint8_t {
   Deliver,
   ClaimTask
 };
+
 struct Decision {
   ActionType action{ActionType::Idle};
   util::Cell target_cell{};

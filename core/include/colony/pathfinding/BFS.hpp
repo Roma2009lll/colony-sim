@@ -39,7 +39,7 @@ public:
     const std::size_t count = graph.node_count();
     if (static_cast<std::size_t>(start) >= count ||
         static_cast<std::size_t>(goal) >= count) {
-      return PathView{};
+      return PathView{}; 
     }
     if (!graph.is_walkable(start) || !graph.is_walkable(goal)) {
       return PathView{};

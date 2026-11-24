@@ -17,7 +17,7 @@ struct PathView {
   std::span<const NodeId> path_{};
   Cost total_cost_{0};
   std::size_t expanded_nodes_{0};
-
+ 
   [[nodiscard]] constexpr bool found() const noexcept { return !path_.empty(); }
 };
 

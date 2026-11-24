@@ -62,6 +62,8 @@ public:
 
   void set_start_position(util::Cell cell) noexcept { start_position_ = cell; }
 
+  [[nodiscard]] const util::Grid<Tile> &grid() const noexcept { return grid_; }
+
   [[nodiscard]] bool check_invariants() const noexcept {
     if (grid_.width() == 0 || grid_.height() == 0) {
       return false;

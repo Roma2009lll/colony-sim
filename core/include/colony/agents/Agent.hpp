@@ -60,6 +60,7 @@ public:
   }
 
   [[nodiscard]] constexpr const Needs &needs() const noexcept { return needs_; }
+  
   [[nodiscard]] constexpr Needs &needs() noexcept { return needs_; }
 
   [[nodiscard]] constexpr bool is_alive() const noexcept {

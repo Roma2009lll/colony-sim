@@ -21,6 +21,12 @@ struct Tile {
     return resource != ResourceType::None && resource_amount > 0;
   }
 
+  constexpr void reset() noexcept {
+    terrain = TerrainType::Ground;
+    resource = ResourceType::None;
+    resource_amount = 0;
+  }
+
   [[nodiscard]] constexpr bool operator==(const Tile &other) const noexcept {
     return terrain == other.terrain && resource == other.resource &&
            resource_amount == other.resource_amount;
