@@ -19,7 +19,7 @@ struct CancelTask {
 };
 
 struct SetBalance {
-  std::uint32_t food_weight_{50};
+  std::uint32_t food_weight_{50}; 
   constexpr bool operator==(const SetBalance &) const noexcept = default;
 };
 

@@ -24,17 +24,14 @@ build_execution_order(std::size_t count,
                       std::span<const agents::Agent> agents) {
   std::vector<std::size_t> order;
   order.reserve(count);
-
   for (std::size_t i = 0; i < count; ++i) {
     if (agents[i].is_alive()) {
       order.push_back(i);
     }
   }
-
   std::sort(order.begin(), order.end(), [&](std::size_t a, std::size_t b) {
     return agents[a].id() < agents[b].id();
   });
-
   return order;
 }
 
@@ -46,36 +43,30 @@ std::optional<util::Cell> find_next_step(const world::World &world,
       !world[start].is_walkable() || start == end) {
     return std::nullopt;
   }
-
   thread_local pathfinding::BfsPathFinder bfs_finder{};
   pathfinding::GridGraph finder{
       world.grid(), [](const world::Tile &t) { return t.is_walkable(); }};
 
   const pathfinding::NodeId start_node = finder.to_node(start);
-
   if (world[end].is_walkable()) {
     const auto view =
         bfs_finder.find_path(finder, start_node, finder.to_node(end));
     return view.path_.size() >= 2 ? std::optional{finder.to_cell(view.path_[1])}
                                   : std::nullopt;
   }
-
   if (manhattan_distance(start, end) == 1) {
     return std::nullopt;
   }
-
   static constexpr std::array<util::Cell, 4> k_dirs{
       {{1, 0}, {-1, 0}, {0, 1}, {0, -1}}};
 
   pathfinding::NodeId best_node = pathfinding::k_invalid_node;
   pathfinding::Cost min_cost = std::numeric_limits<pathfinding::Cost>::max();
-
   for (const auto &dir : k_dirs) {
     const util::Cell next = end + dir;
     if (!world.in_bounds(next) || !world[next].is_walkable()) {
       continue;
     }
-
     const auto view =
         bfs_finder.find_path(finder, start_node, finder.to_node(next));
     if (view.path_.size() >= 2 && view.total_cost_ < min_cost) {
@@ -83,7 +74,6 @@ std::optional<util::Cell> find_next_step(const world::World &world,
       best_node = view.path_[1];
     }
   }
-
   return best_node != pathfinding::k_invalid_node
              ? std::optional{finder.to_cell(best_node)}
              : std::nullopt;
@@ -181,7 +171,6 @@ void resolve(std::span<const ai::Decision> decisions,
       }
       break;
     }
-
     case ai::ActionType::Eat: {
       bool ate = false;
       if (agent.has_resource() &&

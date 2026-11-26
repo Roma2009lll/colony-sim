@@ -31,7 +31,7 @@ enum class TaskError : std::uint8_t {
   InvalidAgent
 };
 
-struct TaskResult {
+struct TaskResult { 
 
   TaskError error{TaskError::None};
 

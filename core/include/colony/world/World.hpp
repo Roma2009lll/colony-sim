@@ -64,6 +64,22 @@ public:
 
   [[nodiscard]] const util::Grid<Tile> &grid() const noexcept { return grid_; }
 
+  [[nodiscard]] bool consume_stored_food(std::uint32_t amount) noexcept {
+    if (stored_food_ < amount) {
+      return false;
+    }
+    stored_food_ -= amount;
+    return true;
+  }
+
+  [[nodiscard]] bool consume_stored_wood(std::uint32_t amount) noexcept {
+    if (stored_wood_ < amount) {
+      return false;
+    }
+    stored_wood_ -= amount;
+    return true;
+  }
+
   [[nodiscard]] bool check_invariants() const noexcept {
     if (grid_.width() == 0 || grid_.height() == 0) {
       return false;

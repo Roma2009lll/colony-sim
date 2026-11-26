@@ -26,7 +26,7 @@ class CommandLog {
 private:
   mutable std::vector<CommandEntry> entries_{};
   mutable bool is_sorted_ = false;
-  void sort() const;
+  void sort() const; 
  
 
 public:

@@ -73,7 +73,7 @@ void CommandLog::sort() const {
 
 void CommandLog::add(std::uint64_t tick, Command command) {
   entries_.emplace_back(tick, std::move(command));
-  is_sorted_ = false;
+  is_sorted_ = false; 
 }
 
 [[nodiscard]] std::span<const CommandEntry>
