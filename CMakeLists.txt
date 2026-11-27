@@ -13,6 +13,7 @@ include(cmake/CompilerWarnings.cmake)
 include(cmake/Sanitizers.cmake)
 
 add_subdirectory(core)
+add_subdirectory(apps/colony_cli)
 
 if(COLONY_BUILD_TESTS)
     enable_testing()

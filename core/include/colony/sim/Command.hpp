@@ -7,7 +7,7 @@
 #include <colony/util/Grid.hpp>
 
 namespace colony::sim {
-
+ 
 struct MarkDirective {
   util::Cell cell_{};
   constexpr bool operator==(const MarkDirective &) const noexcept = default;
