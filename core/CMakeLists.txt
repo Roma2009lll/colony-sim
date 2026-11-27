@@ -1,6 +1,10 @@
 add_library(colony_core STATIC
     src/world/MapLoader.cpp
     src/decision/Decision.cpp
+    src/sim/CommandLog.cpp
+    src/sim/Resolver.cpp
+    src/sim/Simulation.cpp
+    src/sim/StateHash.cpp
 )
 
 target_include_directories(colony_core PUBLIC

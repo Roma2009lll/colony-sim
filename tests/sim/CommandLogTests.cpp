@@ -71,6 +71,7 @@ TEST_F(CommandLogTest, ClearRemovesAllEntries) {
 }
 
 TEST_F(CommandLogTest, RoundTripSerializationAndFileIO) {
+  static_cast<void>(sample_log_.commands_for_tick(0));
   const std::string serialized = sample_log_.to_string();
   const auto from_str = CommandLog::from_string(serialized);
   ASSERT_TRUE(from_str.ok_);
