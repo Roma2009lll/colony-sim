@@ -11,7 +11,7 @@
 namespace colony::sim {
 using StateHash = std::uint64_t;
 
-[[nodeiscard]] constexpr StateHash
+[[nodiscard]] StateHash
 compute_state_hash(uint64_t tick, const world::World &world,
                    std::span<const agents::Agent> agents,
                    const tasks::TaskBoard &task_board,

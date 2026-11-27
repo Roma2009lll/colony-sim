@@ -110,11 +110,10 @@ private:
 };
 } // namespace
 
-constexpr StateHash
-compute_state_hash(std::uint64_t tick, const world::World &world,
-                   std::span<const agents::Agent> agents,
-                   const tasks::TaskBoard &task_board,
-                   const tasks::PriorityPolicy &priority_policy) {
+StateHash compute_state_hash(std::uint64_t tick, const world::World &world,
+                             std::span<const agents::Agent> agents,
+                             const tasks::TaskBoard &task_board,
+                             const tasks::PriorityPolicy &priority_policy) {
   Fnv1aHasher hasher;
   hasher.update(tick);
   const auto width = world.width();

@@ -23,5 +23,5 @@ find_next_step(const world::World &world, util::Cell start, util::Cell end);
 
 void resolve(std::span<const ai::Decision> decisions,
              std::span<agents::Agent> agents, world::World &world,
-             tasks::TaskBoard &task_board, metrics::Stats &stats);
+             tasks::TaskBoard &task_board, metrics::Stats &stats,ResolveConfig config = {});
 } // namespace colony::sim

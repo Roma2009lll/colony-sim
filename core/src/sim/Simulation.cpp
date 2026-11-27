@@ -152,7 +152,7 @@ void Simulation::step() {
   apply_tick_commands();
   update_world_and_needs();
   std::vector<ai::Decision> intends = plan_intents();
-  resolve(intends, agents_, world_, task_board_, stats_);
+  resolve(intends, agents_, world_, task_board_, stats_,config_.resolve_config);
   commit_tick();
 }
 

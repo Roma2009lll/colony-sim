@@ -26,6 +26,10 @@ add_executable(unit_tests
     tasks/TaskBoardTests.cpp
     tasks/TaskTests.cpp
     ai/DecisionTest.cpp
+    sim/CommandLogTests.cpp
+    sim/ResolverTests.cpp
+    sim/SimulationTests.cpp
+    sim/StateHashTests.cpp
 )
 
 target_compile_features(unit_tests PRIVATE cxx_std_20)

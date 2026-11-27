@@ -73,7 +73,7 @@ std::optional<util::Cell> find_next_step(const world::World &world,
       min_cost = view.total_cost_;
       best_node = view.path_[1];
     }
-  }
+  } 
   return best_node != pathfinding::k_invalid_node
              ? std::optional{finder.to_cell(best_node)}
              : std::nullopt;

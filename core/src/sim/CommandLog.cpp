@@ -88,7 +88,7 @@ CommandLog::commands_for_tick(std::uint64_t tick) const noexcept {
         }
       });
   return std::span<const CommandEntry>(first, last);
-}
+} 
 
 void CommandLog::write_to(std::ostream &out) const {
   for (const auto &entry : entries_) {
